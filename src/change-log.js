@@ -1,26 +1,43 @@
 import strftime from 'strftime'
 import semver from 'semver'
+import {buildObject} from './util'
+import isUndefined from 'lodash.isundefined'
+
+const MIN_RELEASABLE_RANK = 1
+const MAX_NONRELEASABLE_RANK = -1
+const RELEASABLE_CHANGE_TYPE_ORDER = ['patch', 'minor', 'major']
+const NONRELEASABLE_CHANGE_TYPE_ORDER = ['semantic']
 
 const CHANGE_TYPE_RANKS = {
-  major: 0,
-  minor: -1,
-  patch: -2,
-  semantic: -3
+  ...(buildObject(RELEASABLE_CHANGE_TYPE_ORDER, (type, idx) => MIN_RELEASABLE_RANK + idx)),
+  ...(buildObject(NONRELEASABLE_CHANGE_TYPE_ORDER, (type, idx) => MAX_NONRELEASABLE_RANK - idx))
 }
 
+const CHANGE_TYPE_LOOKUP_BY_RANK = buildObject(Object.keys(CHANGE_TYPE_RANKS), type => CHANGE_TYPE_RANKS[type], type => type)
+
 export class ChangeLog {
-  constructor (changeLog, {warnings = {push: () => {}}} = {}) {
+  constructor (changeLog, {
+    warnings = {push: () => {}},
+    commitLinkGenerator = (commitId) => ({text: commitId}),
+    initialVersion = '1.0.0'
+  } = {}) {
+    this.commitLinkGenerator = commitLinkGenerator
+
     const releases = (changeLog.Releases || [])
     releases.forEach(release => this.validateRelease(release, warnings))
 
     // Sort by release number (highest first)
-    this.releases = [...releases]
-      .sort(({release: releaseA}, {release: releaseB}) => releaseB - releaseA)
-      .map(release => ({...release, date: new Date(release.date)}))
+    this.releases = releases
+      .map(release => ({
+        ...release,
+        date: (release.date && new Date(release.date)) || undefined,
+        identifier: this.getReleaseIdentifier(release)
+      }))
+      .sort(this.compareReleases.bind(this))
 
     this.releases.forEach((release, idx) => {
       release.changes = [...(release.changes || [])]
-        .sort(compareChangesByType)
+        .sort(this.compareChangesByType.bind(this))
         .map(change => ({...change}))
       release.changes.forEach(change => {
         change.commits = [...(change.commits || [])]
@@ -28,27 +45,59 @@ export class ChangeLog {
 
       release.prev = this.releases[idx + 1]
       release.next = this.releases[idx - 1]
-      if (release.prev) {
-        if (release.prev.release === release.release) {
-          warnings.push(new Error(`Duplicate release number ${release.release}`))
+      if (!release.prev) {
+        if (!release.version) {
+          release.version = initialVersion
         }
-        if (release.prev.release + 1 < release.release) {
-          warnings.push(new Error(`Releases skipped between ${release.prev.release} and ${release.release}`))
+      } else {
+        if (isUndefined(release.release)) {
+          const identifier = release.identifier
+          release.release = release.prev.release + 1
+          release.identifier = this.getReleaseIdentifier(release, true)
+          warnings.push(new Error(`Release ${identifier} had no release number, a release number (${release.release}) was auto generated based on the previous release`))
+        } else {
+          if (release.prev.release === release.release) {
+            warnings.push(new Error(`Duplicate release number ${release.release}`))
+          }
+          if (release.prev.release + 1 < release.release) {
+            warnings.push(new Error(`Releases skipped between ${release.prev.identifier} and ${release.release.identifier}`))
+          }
         }
-        if (semver.lte(release.version, release.prev.version)) {
-          warnings.push(new Error(`Release ${release.release} version (${release.version}) is not greater than that of the previous release (rel${release.prev.release}: ${release.prev.version})`))
+
+        if (semver.valid(release.prev.version) && semver.valid(release.version) && semver.lte(release.version, release.prev.version)) {
+          warnings.push(new Error(`Release ${release.identifier} version (${release.version}) is not greater than that of the previous release (${release.prev.identifier}: ${release.prev.version})`))
         }
         if (release.date < release.prev.date) {
-          warnings.push(new Error(`Release ${release.release} has a release date (${release.date}) prior to the previous release (rel${release.prev.release}: ${release.prev.date})`))
+          warnings.push(new Error(`Release ${release.identifier} has a release date (${release.date}) prior to the previous release (${release.prev.identifier}: ${release.prev.date})`))
         }
-        release.step = semver.diff(release.prev.version, release.version)
+
+        if (semver.valid(release.prev.version) && semver.valid(release.version)) {
+          release.step = semver.diff(release.prev.version, release.version)
+        }
         if (release.changes.length) {
-          const stepRank = CHANGE_TYPE_RANKS[release.step]
-          const biggestChange = Math.max(...(release.changes.map(({type}) => CHANGE_TYPE_RANKS[type])))
-          if (biggestChange > stepRank) {
-            warnings.push(new Error(`Insufficient version step (${release.step}) in release ${release.release}: change list describes larger changes`))
-          } else if (biggestChange < stepRank) {
-            warnings.push(new Error(`Unnecessary version step (${release.step}) in release ${release.release}: no changes listed with that significance`))
+          const changeRanks = release.changes.map(({type}) => CHANGE_TYPE_RANKS[type])
+          if (changeRanks.some(isUndefined)) {
+            const unrecognizedTypes = release.changes
+              .map(({type}) => type)
+              .filter(type => isUndefined(CHANGE_TYPE_RANKS[type]))
+            warnings.push(new Error(`Release ${release.identifier} has unrecognized change types: ${unrecognizedTypes.join(', ')}`))
+          } else if (!changeRanks.some(rank => rank >= MIN_RELEASABLE_RANK)) {
+            warnings.push(new Error(`Release ${release.identifier} has no releaseable changes listed`))
+          } else {
+            const biggestChangeRank = Math.max(...changeRanks)
+            const biggestChange = CHANGE_TYPE_LOOKUP_BY_RANK[biggestChangeRank]
+            if (release.step) {
+              const stepRank = CHANGE_TYPE_RANKS[release.step]
+              if (biggestChangeRank > stepRank) {
+                warnings.push(new Error(`Insufficient version step (${release.step}) in release ${release.identifier}: change list describes ${biggestChange} changes from release ${release.prev.identifier}`))
+              } else if (biggestChangeRank < stepRank) {
+                warnings.push(new Error(`Possibly unnecessary version step (${release.step}) in release ${release.identifier}: largest described change is ${biggestChange}`))
+              }
+            } else if (semver.valid(release.prev.version) && !release.version && biggestChangeRank >= MIN_RELEASABLE_RANK) {
+              release.version = semver.inc(release.prev.version, biggestChange)
+              release.identifier = this.getReleaseIdentifier(release, true)
+              warnings.push(new Error(`Release ${release.identifier} had no version, it was automatically generated based on previous release and recorded changes (${release.version})`))
+            }
           }
         }
       }
@@ -56,27 +105,36 @@ export class ChangeLog {
   }
 
   validateRelease (release, warnings) {
+    const identifier = this.getReleaseIdentifier(release)
     if (!release.release || isNaN(release.release) || parseInt(release.release) !== parseFloat(release.release) || release.release <= 0) {
-      throw new Error(`Invalid release number: ${release.release}. Expected an integer greater than 0`)
+      warnings.push(new Error(`Invalid release number (${release.release}) for release ${identifier}. Expected an integer greater than 0`))
     }
 
     if (!semver.valid(release.version)) {
-      throw new Error(`Version string for release ${release.release} is not a valid semver`)
+      warnings.push(new Error(`Version string for release ${identifier} is not a valid semver: ${release.version}`))
     }
 
     if (semver.prerelease(release.version)) {
-      warnings.push(new Error(`Release ${release.release} is a pre-release version: ${release.version}`))
+      warnings.push(new Error(`Release ${identifier} is a pre-release version: ${release.version}`))
     }
 
     if (!release.date) {
-      throw new Error(`Release ${release.release} has no release date`)
+      warnings.push(new Error(`Release ${identifier} has no release date`))
+    }
+  }
+
+  generateMarkdownLink ({text, url}) {
+    if (url) {
+      return `[${text}](${url})`
+    } else {
+      return String(text)
     }
   }
 
   writeMarkdown (writer) {
     this.releases
       .forEach(release => {
-        writer.writeline(`## Release ${release.release} - ${release.version} - ${formatDate(release.date)}`)
+        writer.writeline(`## Release ${release.release} - ${release.version} - ${this.formatDate(release.date)}`)
         writer.skipline()
         writer.write('&nbsp;&nbsp;&nbsp;&nbsp;_')
         if (release.step) {
@@ -94,7 +152,12 @@ export class ChangeLog {
         release.changes.forEach(({type, description, commits}) => {
           writer.write(`*   _${type}_ - ${description}`)
           if (commits.length) {
-            writer.writeline(` _(${commits.join(', ')})_`)
+            writer.writeline(` _(${commits
+                .map((commit) => this.commitLinkGenerator(commit))
+                .map(this.generateMarkdownLink.bind(this))
+                .join(', ')})_`)
+          } else {
+            writer.endline()
           }
         })
 
@@ -103,14 +166,45 @@ export class ChangeLog {
 
     return writer
   }
-}
 
-function compareChangesByType ({type: typeA}, {type: typeB}) {
-  const rankA = CHANGE_TYPE_RANKS[typeA]
-  const rankB = CHANGE_TYPE_RANKS[typeB]
-  return rankB - rankA
-}
+  compareChangesByType ({type: typeA}, {type: typeB}) {
+    const rankA = CHANGE_TYPE_RANKS[typeA]
+    const rankB = CHANGE_TYPE_RANKS[typeB]
+    return rankB - rankA
+  }
 
-function formatDate (date) {
-  return strftime('%Y-%m-%d', date)
+  getReleaseIdentifier (release, force) {
+    const {identifier, release: releaseNumber, version, date} = release
+    if (identifier && !force) {
+      return identifier
+    } else if (releaseNumber) {
+      return String(releaseNumber)
+    } else if (version) {
+      return version
+    } else if (date) {
+      return this.formatDate(date)
+    }
+    return 'unknown'
+  }
+
+  compareReleases (releaseA, releaseB) {
+    if (releaseA.release && releaseB.release) {
+      return releaseB.release - releaseA.release
+    }
+    if (semver.valid(releaseA.version) && semver.valid(releaseB.version)) {
+      return semver.compare(releaseB.version, releaseA.version)
+    }
+    if (releaseA.date && releaseB.date) {
+      return releaseB.date - releaseA.date
+    }
+    return 0
+  }
+
+  formatDate (date) {
+    if (date) {
+      return strftime('%Y-%m-%d', date)
+    } else {
+      return 'unknown'
+    }
+  }
 }

@@ -1,7 +1,12 @@
 {
-  "name": "change-log",
+  "name": "structured-change",
   "version": "0.0.1",
   "description": "Handle formatted change logs",
+  "keywords": [
+    "change log",
+    "changelog",
+    "change-log"
+  ],
   "main": "dist/src/index.js",
   "scripts": {
     "clean": "rimraf coverage/ .nyc_output/ dist/",
@@ -27,7 +32,16 @@
     "compile": "if-env NODE_ENV=production && npm run compile-prod || npm run compile-dev",
     "build": "npm-run-all clean verify compile"
   },
-  "author": "Brian Mearns",
+  "author": "Brian Mearns <mearns.b@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mearns/structured-change.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mearns/structured-change/issues",
+    "email": "mearns.b@gmail.com"
+  },
+  "homepage": "https://github.com/mearns/structured-change",
   "engines": {
     "node": ">5.0.0 <=9"
   },
@@ -79,6 +93,7 @@
     "yaml-lint": "1.0.0"
   },
   "dependencies": {
+    "lodash.isundefined": "3.0.1",
     "semver": "5.5.0",
     "strftime": "0.10.0",
     "text-scribe": "1.1.1"

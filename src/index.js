@@ -1,6 +1,7 @@
 
 import {TextWriter} from 'text-scribe'
 import {ChangeLog} from './change-log'
+import * as gitUtils from './git-utils'
 
 const warnings = []
 
@@ -9,17 +10,18 @@ const changeLog = new ChangeLog({
     {
       release: 2,
       version: '1.1.0',
-      date: '2018-04-12',
       description: 'Add an `adopt(thennable)` method to settle an `ExtrinsicPromise` based on the settled state of another thennable.',
       changes: [
         {
           type: 'semantic',
           description: 'Document in README that fulfill and reject methods are bound.',
-          commits: ['9fb1eeb']
+          commits: ['9fb1eeb'],
+          issues: ['1', '2']
         },
         {
           type: 'minor',
-          description: 'Add `ExtrinsicPromise::adopt()` method'
+          description: 'Add `ExtrinsicPromise::adopt()` method',
+          issues: ['3']
         },
         {
           type: 'semantic',
@@ -39,8 +41,18 @@ const changeLog = new ChangeLog({
     },
     {
       release: 4,
-      version: '2.0.0',
-      date: '2018-05-01'
+      date: '2018-05-01',
+      version: '1.2.0',
+      changes: [
+        {
+          type: 'foo',
+          description: 'Add `ExtrinsicPromise::adopt()` method'
+        },
+        {
+          type: 'minor',
+          description: 'Add `ExtrinsicPromise::adopt()` method'
+        }
+      ]
     },
     {
       release: 5,
@@ -48,9 +60,12 @@ const changeLog = new ChangeLog({
       date: '2018-06-03'
     }
   ]
-}, {warnings})
+}, {
+  warnings,
+  commitLinkGenerator: gitUtils.createGithubCommitLinkGenerator({username: 'mearns', repo: 'structured-change'})
+})
 
-warnings.forEach(warning => console.log('Warning: ', warning))
+warnings.forEach(warning => console.error('Warning: ', warning))
 
 const writer = changeLog.writeMarkdown(new TextWriter())
 
