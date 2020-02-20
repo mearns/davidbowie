@@ -1,23 +1,31 @@
 {
-  "name": "$PROJECT_NAME",
+  "name": "davidbowie",
   "version": "0.1.0",
-  "description": "",
+  "description": "Manage change logs and release notes for your software project.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "keywords": [],
+  "keywords": [
+    "change",
+    "changelog",
+    "changes",
+    "change-log",
+    "release-notes",
+    "releases",
+    "release notes"
+  ],
   "files": [
     "dist/**"
   ],
   "repository": {
     "type": "git",
-    "url": "git@github.com:mearns/$PROJECT_NAME.git"
+    "url": "git@github.com:mearns/davidbowie.git"
   },
   "author": "Brian Mearns <mearns.b@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mearns/$PROJECT_NAME/issues"
+    "url": "https://github.com/mearns/davidbowie/issues"
   },
-  "homepage": "https://github.com/mearns/$PROJECT_NAME/",
+  "homepage": "https://github.com/mearns/davidbowie/",
   "engines": {
     "node": ">=8 <=13"
   },
