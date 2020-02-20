@@ -14,4 +14,10 @@ class SecurityIssue {
     this.link = link
     this.summary = summary
   }
+
+  toJSON () {
+    const json = { link: this.link }
+    if (this.summary) { json.summary = this.summary }
+    return json
+  }
 }

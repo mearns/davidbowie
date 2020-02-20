@@ -2,17 +2,21 @@ import git from 'simple-git'
 import Promise from 'bluebird'
 import change from '../domain/change'
 import preRelease from '../domain/pre-release'
+import semver from 'semver'
 
 function logEntryToChange (entry) {
-  return change({
+  const c = change({
     type: 'major',
     description: entry.message,
     commits: [entry.hash]
   })
+  c.type = 'TODO-SELECT: major minor patch semantic'
+  return c
 }
 
 function logToPreRelease (log) {
   return preRelease({
+    description: 'TODO: Describe this release',
     changes: log.map(logEntryToChange)
   })
 }
@@ -61,6 +65,11 @@ class GitService {
 
   getTagPathForVersion (v) {
     return `refs/tags/versions/${v}`
+  }
+
+  createTagsForRelease (release) {
+    return this._call('tag', `versions/${semver.clean(release.version)}`)
+      .then(() => this._call('tag', `releases/${release.release}`))
   }
 
   getLogBetweenVersions (v1, v2) {

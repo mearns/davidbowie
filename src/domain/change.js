@@ -1,6 +1,7 @@
 import {compareTypes, isValidType} from './change-types'
 import issue from './issue'
 import securityIssue from './security-issue'
+import deprecation from './deprecation'
 
 export function compareChanges (changeA, changeB) {
   const CHANGE_A_MORE_IMPORTANT = -1
@@ -49,7 +50,7 @@ export default function change (data) {
 }
 
 class Change {
-  constructor ({type, description = '', commits = [], issuesAddressed = [], securityIssuesAddressed = []}) {
+  constructor ({type, description = '', commits = [], issuesAddressed = [], securityIssuesAddressed = [], deprecates = [] }) {
     if (!isValidType(type)) {
       throw new TypeError(`Invalid change type: ${type}`)
     }
@@ -58,5 +59,18 @@ class Change {
     this.commits = forceArray(commits).map(String)
     this.issuesAddressed = forceArray(issuesAddressed).map(issue)
     this.securityIssuesAddressed = forceArray(securityIssuesAddressed).map(securityIssue)
+    this.deprecates = forceArray(deprecates).map(deprecation)
+  }
+
+  toJSON () {
+    const json = {
+      type: this.type,
+      description: this.description
+    }
+    if (this.deprecates.length) { json.deprecates = this.deprecates }
+    if (this.securityIssuesAddressed.length) { json.securityIssuesAddressed = this.securityIssuesAddressed }
+    if (this.issuesAddressed.length) { json.issuesAddressed = this.issuesAddressed }
+    if (this.commits.length) { json.commits = this.commits }
+    return json
   }
 }

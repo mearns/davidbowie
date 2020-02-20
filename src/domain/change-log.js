@@ -18,7 +18,8 @@ function prepareAndValidateNextRelease (next, prev) {
   const candidate = preRelease(next)
   const updates = {
     release: next.release,
-    version: next.version
+    version: next.version,
+    date: next.date
   }
   if (next.release == null) {
     updates.release = prev.release + 1
@@ -41,7 +42,7 @@ function prepareAndValidateNextRelease (next, prev) {
     }
   }
 
-  return candidate.release(updates)
+  return candidate.promoteToRelease(updates)
 }
 
 class ChangeLog {
@@ -51,6 +52,14 @@ class ChangeLog {
     for (let r of sortedReleaseData) {
       this.addRelease(r)
     }
+  }
+
+  toJSON () {
+    return [...this.releases].reverse()
+  }
+
+  getLatestRelease () {
+    return this.releases[this.releases.length - 1]
   }
 
   addRelease (data) {

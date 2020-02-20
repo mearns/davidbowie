@@ -1,6 +1,7 @@
 import isUndefined from 'lodash.isundefined'
 
 const CHANGE_TYPE_RANKS = {
+  semantic: -1,
   patch: 0,
   minor: 1,
   major: 2
@@ -18,6 +19,11 @@ export function assertValidType (type) {
   if (!isValidType(type)) {
     throw new TypeError(`Invalid change type ${type}. Expected one of ${Object.keys(CHANGE_TYPE_RANKS).join(', ')}`)
   }
+}
+
+export function isReleasableType (type) {
+  const rank = CHANGE_TYPE_RANKS[type]
+  return rank != null && rank >= 0
 }
 
 export function compareTypes (typeA, typeB) {

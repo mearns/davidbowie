@@ -2,6 +2,7 @@
 import changeSet from './change-set'
 import release from './release'
 import semver from 'semver'
+import { isReleasableType } from './change-types'
 
 export default function preRelease (data) {
   if (data instanceof preRelease) {
@@ -11,12 +12,24 @@ export default function preRelease (data) {
 }
 
 class PreRelease {
-  constructor ({ description, date, changes }) {
-    this.date = date && (date instanceof Date ? date : new Date(date))
-
+  constructor ({ version = null, description, changes = [] } = {}) {
     this.description = description
-
     this.changes = changeSet(changes)
+    this.version = version
+  }
+
+  addChanges (changes) {
+    this.changes.addChanges(changes)
+  }
+
+  toJSON () {
+    const json = {}
+    if (this.version != null) {
+      json.version = this.version
+    }
+    json.description = this.description
+    json.changes = this.changes
+    return json
   }
 
   getMinimumReleaseType () {
@@ -25,7 +38,7 @@ class PreRelease {
 
   getSuggestedVersion (previousVersion) {
     const minimumType = this.getMinimumReleaseType()
-    if (minimumType) {
+    if (minimumType && isReleasableType(minimumType)) {
       return semver.inc(previousVersion, this.getMinimumReleaseType())
     } else {
       return previousVersion
@@ -36,7 +49,7 @@ class PreRelease {
     return semver.gte(version, this.getSuggestedVersion(previousVersion))
   }
 
-  release ({ release: releaseNumber, version }) {
-    return release({ release: releaseNumber, version, date: this.date, description: this.description, changes: this.changes })
+  promoteToRelease ({ release: releaseNumber, version = this.version, date }) {
+    return release({ release: releaseNumber, version, date, description: this.description, changes: this.changes.changes })
   }
 }
