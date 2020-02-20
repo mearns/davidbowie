@@ -14,3 +14,19 @@ export async function readFile(
     });
   });
 }
+
+export async function writeFile(
+  path: string,
+  content: string,
+  encoding: string
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    fs.writeFile(path, content, encoding, (error: Error): void => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+}

@@ -101,7 +101,9 @@
     "typescript-json-schema": "^0.42.0"
   },
   "dependencies": {
+    "@types/semver": "^7.1.0",
     "js-yaml": "^3.13.1",
-    "jsonschema": "^1.2.5"
+    "jsonschema": "^1.2.5",
+    "semver": "^7.1.3"
   }
 }

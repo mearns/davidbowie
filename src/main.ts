@@ -1,8 +1,12 @@
-import { loadFromFile } from "./services/change-log-loader";
+import { loadFromFile } from "./services/marshall";
 import path from "path";
+import { ChangeLog } from "./domain/change-log";
 
 async function main() {
-  const x: any = loadFromFile(path.resolve(__dirname, "..", "CHANGES.yaml"));
+  const x: ChangeLog = await loadFromFile(
+    path.resolve(__dirname, "..", "CHANGES.yaml")
+  );
+  console.log(JSON.stringify(x, null, 4));
 }
 
 main();

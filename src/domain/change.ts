@@ -22,51 +22,22 @@ export enum Compatibility {
   DOC = "doc"
 }
 
-export interface VersionObject {
-  /**
-   * Indicates the major version number.
-   * @minimum 0
-   * @TJS-type integer
-   */
-  readonly majorVersion: number;
-
-  /**
-   * Indicates the minor version number.
-   * @minimum 0
-   * @TJS-type integer
-   */
-  readonly minorVersion: number;
-
-  /**
-   * Indicates the patch version number.
-   * @minimum 0
-   * @TJS-type integer
-   */
-  readonly patchVersion: number;
-
-  /**
-   * A sequence of pre-release identifiers.
-   */
-  readonly preReleaseIdentifiers?: Array<string>;
-}
-
-export type Version = VersionObject | string;
-
-export enum IssueEvent {
+export enum IssueEventType {
   INTRODUCED = "introduced",
   WORKED_ON = "worked on",
   FIXED = "fixed"
 }
 
+export interface IssueEvent {
+  readonly url: string;
+  readonly event: IssueEventType;
+  readonly summary?: string;
+}
+
 export interface Change {
-  readonly commits?: Array<string>;
+  readonly commits?: ReadonlyArray<string>;
   readonly summary?: string;
   readonly description?: string;
   readonly compatibility: Compatibility;
-}
-
-export interface IssueChange extends Change {
-  readonly issueUrl: string;
-  readonly issueEvent: IssueEvent;
-  readonly issueSummary?: string;
+  readonly issues?: ReadonlyArray<IssueEvent>;
 }
