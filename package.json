@@ -39,7 +39,9 @@
     "check:readme": "remark --no-stdout README.md",
     "check:code": "eslint ./ test/ --ext .js --ext .ts --format codeframe",
     "check": "npm run check:code && npm run check:readme",
-    "compile": "tsc",
+    "compile:schema": "mkdir -p dist/ && typescript-json-schema --required --strictNullChecks tsconfig.json ChangeLog --out dist/schema.json && echo 'module.exports = require(\"./schema.json\");' > dist/schema.js && rm -f dist/schema.js.map",
+    "compile:tsc": "tsc",
+    "compile": "npm run compile:tsc && npm run compile:schema",
     "build": "npm run clean && npm run compile && npm run verify",
     "docs": "typedoc --out out/docs --mode file --includeVersion --exclude \"+(node_modules|dist|out)/**/*\" --includeDeclarations src",
     "prepublishOnly": "rimraf node_modules && npm install && npm audit && npm run build && npm run docs"
@@ -70,7 +72,9 @@
   },
   "devDependencies": {
     "@types/chai": "^4.2.9",
+    "@types/js-yaml": "^3.12.2",
     "@types/mocha": "^7.0.1",
+    "@types/node": "^13.7.4",
     "@types/sinon-chai": "^3.2.3",
     "@typescript-eslint/eslint-plugin": "^2.20.0",
     "@typescript-eslint/parser": "^2.20.0",
@@ -93,7 +97,11 @@
     "sinon-chai": "^3.4.0",
     "ts-node": "^8.6.2",
     "typedoc": "^0.16.10",
-    "typescript": "^3.7.5"
+    "typescript": "^3.7.5",
+    "typescript-json-schema": "^0.42.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "js-yaml": "^3.13.1",
+    "jsonschema": "^1.2.5"
+  }
 }
