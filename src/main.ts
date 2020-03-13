@@ -2,7 +2,7 @@ import { loadFromFile } from "./services/marshall";
 import path from "path";
 import { ChangeLog } from "./domain/change-log";
 
-async function main() {
+async function main(): Promise<void> {
   const x: ChangeLog = await loadFromFile(
     path.resolve(__dirname, "..", "CHANGES.yaml")
   );

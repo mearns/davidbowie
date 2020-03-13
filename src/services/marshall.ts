@@ -1,49 +1,38 @@
 import { readFile, writeFile } from "./fs";
-import * as changeLog from "../domain/change-log";
 import path from "path";
 import yaml from "js-yaml";
-import schema from "../schema";
-import { Validator } from "jsonschema";
-import { ChangeLog } from "./change-log";
-import { valid } from "semver";
-
-const validator: Validator = new Validator();
+import { ChangeLog } from "../domain/change-log";
+import { validate } from "./validator";
+import { InternalError, UnsupportedFileExtensionError } from "../errors";
 
 export enum SupportedFormat {
   yaml = "YAML",
   json = "JSON"
 }
 
+const SUPPORTED_EXTENSIONS: { [ext: string]: SupportedFormat } = Object.freeze({
+  yaml: SupportedFormat.yaml,
+  yml: SupportedFormat.yaml,
+  json: SupportedFormat.json
+});
+
 export async function writeToFile(
   changeLog: ChangeLog,
   pathToFile: string,
   format: SupportedFormat = chooseFormat(pathToFile)
-) {
+): Promise<void> {
   return writeFile(pathToFile, serialize(format, changeLog), "utf-8");
 }
 
 export async function loadFromFile(
   pathToFile: string,
   format: SupportedFormat = chooseFormat(pathToFile)
-): Promise<changeLog.ChangeLog> {
+): Promise<ChangeLog> {
   const fileData: string = await readFile(pathToFile, "utf-8");
   return validate(deserialize(format, fileData));
 }
 
-function validate(contents: any): changeLog.ChangeLog {
-  const results = validator.validate(contents, schema);
-  if (results.errors.length) {
-    throw Object.assign(
-      new Error(
-        `Validation errors found in change-log. Error count: ${results.errors.length}`
-      ),
-      { errors: results.errors }
-    );
-  }
-  return new ChangeLog(contents);
-}
-
-function deserialize(format: SupportedFormat, data: string): any {
+function deserialize(format: SupportedFormat, data: string): unknown {
   switch (format) {
     case SupportedFormat.yaml:
       return yaml.safeLoad(data);
@@ -52,7 +41,10 @@ function deserialize(format: SupportedFormat, data: string): any {
       return JSON.parse(data);
 
     default:
-      throw new Error(`Unsupported SupportedFormat: ${format}`);
+      throw new InternalError(`Unsupported SupportedFormat: ${format}`, {
+        format,
+        SupportedFormat
+      });
   }
 }
 
@@ -65,21 +57,23 @@ function serialize(format: SupportedFormat, data: ChangeLog): string {
       return JSON.stringify(data, null, 4);
 
     default:
-      throw new Error(`Unsupported SupportedFormat: ${format}`);
+      throw new InternalError(`Unsupported SupportedFormat: ${format}`, {
+        format,
+        SupportedFormat
+      });
   }
 }
 
 function chooseFormat(pathToFile: string): SupportedFormat {
-  const ext = path.extname(pathToFile).toLowerCase();
-  switch (ext) {
-    case ".yaml":
-    case ".yml":
-      return SupportedFormat.yaml;
-
-    case ".json":
-      return SupportedFormat.json;
-
-    default:
-      throw new Error(`Unknown file extension: ${pathToFile}`);
+  const suffix = path.extname(pathToFile).toLowerCase();
+  const [, ext] = suffix.match(/^\.(.*)$/) || [null, suffix];
+  const format: SupportedFormat | undefined = SUPPORTED_EXTENSIONS[ext];
+  if (typeof format === "undefined") {
+    throw new UnsupportedFileExtensionError(
+      pathToFile,
+      ext,
+      Object.keys(SUPPORTED_EXTENSIONS)
+    );
   }
+  return format;
 }

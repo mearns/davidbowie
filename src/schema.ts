@@ -9,6 +9,6 @@ const program = TJS.programFromConfig(
 const schema: Schema = (TJS.generateSchema(
   program,
   "ChangeLog"
-) as any) as Schema;
+) as unknown) as Schema;
 
 export default schema;
