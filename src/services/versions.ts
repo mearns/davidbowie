@@ -3,7 +3,7 @@ export { SemVer } from "semver";
 
 export type Version = SemVer | string;
 
-export function parseVersion(version: Version): Version {
+export function parseVersion(version: Version): SemVer {
   if (isSemVer(version)) {
     return version;
   }

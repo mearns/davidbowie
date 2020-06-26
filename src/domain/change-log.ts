@@ -1,7 +1,8 @@
 import {
   isUnknownObject,
-  isOptionalString,
-  isOptionalArrayOf
+  isOptionalText,
+  isOptionalArrayOf,
+  Text
 } from "../services/type-utils";
 import { Change, isChange } from "./change";
 import { SemVer } from "semver";
@@ -10,16 +11,16 @@ import { isVersion } from "../services/versions";
 
 export interface ReleaseContents {
   changes?: Array<Change>;
-  summary?: string;
-  description?: string;
+  summary?: Text;
+  description?: Text;
 }
 
 export function isReleaseContents(x: unknown): x is ReleaseContents {
   return (
     isUnknownObject(x) &&
     isOptionalArrayOf(isChange, x.changes) &&
-    isOptionalString(x.summary) &&
-    isOptionalString(x.description)
+    isOptionalText(x.summary) &&
+    isOptionalText(x.description)
   );
 }
 

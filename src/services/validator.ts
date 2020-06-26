@@ -6,8 +6,8 @@ import { ChangeLogValidationError, InternalError } from "../errors";
 const validator: Validator = new Validator();
 
 /**
- * Validate and return a changelog.
- * @throws {ChangeLogValidationError} if there are any validation errors;
+ * Validate and return a ChangeLog.
+ * @throws {ChangeLogValidationError} if there are any validation errors
  * @param contents The parsed changelog
  */
 export function validate(contents: unknown): ChangeLog {

@@ -1,11 +1,11 @@
-import { ValidatorResult, ValidationError } from "jsonschema";
+import { ValidationError } from "jsonschema";
 
 /**
  * Base class for all errors caused by the caller or external
  * files, as opposed to internal errors caused by bugs in the
  * code.
  */
-export class ExternalError extends Error {
+class ExternalError extends Error {
   constructor(name: string, message?: string) {
     super(message);
     this.name = name;
@@ -45,7 +45,11 @@ export class UnsupportedFileExtensionError extends ExternalError {
   extension: string;
   filepath: string;
   supportedExtensions: Array<string>;
-  constructor(filepath, extension, supportedExtensions) {
+  constructor(
+    filepath: string,
+    extension: string,
+    supportedExtensions: Array<string>
+  ) {
     super(
       "UnsupportedFileExtensionError",
       `Unsupported file extension ${extension}: the following are supported: ${supportedExtensions.join(
@@ -55,5 +59,18 @@ export class UnsupportedFileExtensionError extends ExternalError {
     this.filepath = filepath;
     this.extension = extension;
     this.supportedExtensions = supportedExtensions;
+  }
+}
+
+export class MultipleChangeLogsFoundError extends ExternalError {
+  directory: string;
+  fileNames: Array<string>;
+  constructor(directory: string, fileNames: string[]) {
+    super(
+      "MultipleChangeLogsFoundError",
+      `Found multiple CHANGELOG files in directory: ${directory}`
+    );
+    this.directory = directory;
+    this.fileNames = fileNames;
   }
 }

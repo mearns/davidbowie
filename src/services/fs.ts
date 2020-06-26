@@ -15,6 +15,30 @@ export async function readFile(
   });
 }
 
+async function access(path: fs.PathLike, mode: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    fs.access(path, mode, (error: NodeJS.ErrnoException) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+export async function fileExists(path: fs.PathLike): Promise<boolean> {
+  try {
+    await access(path, fs.constants.F_OK);
+  } catch (error) {
+    if (error.syscall === "access" && error.code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+  return true;
+}
+
 export async function writeFile(
   path: string,
   content: string,
