@@ -16,10 +16,15 @@ export function validate(contents: unknown): ChangeLog {
     throw new ChangeLogValidationError(results.errors);
   }
   if (isChangeLog(contents)) {
+    verifyConsistency(contents);
     return contents;
   }
   throw new InternalError(
     `ChangeLog contents passed validation, but not the typeguard`,
     { contents, validationResults: results }
   );
+}
+
+function verifyConsistency(contents: ChangeLog): void {
+  // XXX: Verify that releases increments, version numbers match compatibility, etc.
 }
